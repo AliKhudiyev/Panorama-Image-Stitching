@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include<exception>
 #include<string>
 
 enum ERROR { 
@@ -24,35 +25,37 @@ class Exception{
     std::string msg_;
 
     public:
-    Exception(const std::string& msg, const ERROR& error=DEFAULT){
+    explicit Exception(const char* msg, const ERROR& error=DEFAULT){
         switch(error){
             case DEFAULT:
                 msg_=msg;
                 break;
             case LIGHT:
-                msg_="LIGHT ERROR: "+msg;
+                msg_="LIGHT ERROR: "+std::string(msg);
                 msg_+="\tInitializing default parameters to continue..";
                 break;
             case NFILE:
-                msg_="FILE ERROR: "+msg;
+                msg_="FILE ERROR: "+std::string(msg);
                 break;
             case FATAL:
-                msg_="FATAL ERROR: "+msg;
+                msg_="FATAL ERROR: "+std::string(msg);
                 break;
             case MEMORY:
-                msg_="MEMORY ERROR: "+msg;
+                msg_="MEMORY ERROR: "+std::string(msg);
                 break;
             case LOGIC:
-                msg_="LOGIC ERROR: "+msg;
+                msg_="LOGIC ERROR: "+std::string(msg);
                 break;
             case INFO:
-                msg_="INFO: "+msg;
+                msg_="INFO: "+std::string(msg);
                 break;
             default:
-                msg_="Undefined: "+msg;
+                msg_="Undefined: "+std::string(msg);
                 break;
         }
     }
+    explicit Exception(const std::string& msg, const ERROR& error=DEFAULT): 
+        Exception(msg.c_str(), error) {}
     const std::string& get() const{
         return msg_;
     }

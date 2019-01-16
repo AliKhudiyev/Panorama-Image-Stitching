@@ -4,6 +4,8 @@
 #define X_POS 0
 #define Y_POS 1
 
+#define CSDIFF 3
+
 typedef unsigned char uchar;
 
 struct Color{
@@ -15,10 +17,9 @@ struct Color{
     void Info() const;
     ~Color(){}
 
-    Color multiply(double coef) const;
-
     Color operator+(const Color& color) const;
     Color operator*(double coef) const;
+    bool operator==(const Color& color) const;
 
     private:
     void check();

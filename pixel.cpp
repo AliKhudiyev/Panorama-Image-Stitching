@@ -11,22 +11,6 @@ void Color::Info() const{
     std::cout<<std::endl;
 }
 
-Color Color::multiply(double coef) const{
-    Color color;
-
-    color.r_=r_*coef;
-    color.g_=g_*coef;
-    color.b_=b_*coef;
-    color.a_=a_;
-    
-    try{
-        color.check();
-    } catch(Exception& exception){
-        std::cout<<exception.get();
-    }
-    return color;
-}
-
 Color Color::operator+(const Color& color) const{
     Color final_color;
 
@@ -57,6 +41,14 @@ Color Color::operator*(double coef) const{
         std::cout<<exception.get();
     }
     return color;
+}
+
+bool Color::operator==(const Color& color) const{
+    if(r_+CSDIFF>color.r_ && r_-CSDIFF<color.r_ &&
+       g_+CSDIFF>color.g_ && g_-CSDIFF<color.g_ && 
+       b_+CSDIFF>color.b_ && b_-CSDIFF<color.b_ && 
+       a_+CSDIFF>color.a_ && a_-CSDIFF<color.a_) return true;
+    return false;
 }
 
 void Color::check(){

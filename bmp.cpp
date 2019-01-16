@@ -65,58 +65,45 @@ void BMP::horizontal_stitch(const BMP& image){
 BMP BMP::elongate(const std::vector<double>& sf, const BMP& image){
     BMP elongated_image;
     double csf;
-    // auto eit=elongated_image.color_.begin();
     auto it=image.color_.begin();
     unsigned diff=image.info_.image_height_/sf.size();
 
     elongated_image.info_=image.info_;
     elongated_image.header_=image.header_;
     elongated_image.info_.image_width_=(double)image.info_.image_width_*sf[0];
+    elongated_image.info_.image_height_=0xffffffff-image.info_.image_height_;
     elongated_image.info_.file_size_=elongated_image.info_.image_width_*image.info_.image_height_*4+54;
     elongated_image.info_.image_size_=elongated_image.info_.file_size_-54;
     elongated_image.update();
-    // elongated_image.allocate(elongated_image.info_.image_width_*elongated_image.info_.image_height_);
-    elongated_image.color_.resize(elongated_image.info_.image_width_*image.info_.image_height_, Color(0,255,0,255));
+    
+    try{
+        elongated_image.allocate(elongated_image.info_.image_width_*image.info_.image_height_);
+    } catch(Exception& exception){
+        throw exception;
+    }
     auto eit=elongated_image.color_.begin();
 
     elongated_image.Info();
-    // std::cout<<"expected eit color size : "<<elongated_image.info_.image_width_*image.info_.image_height_<<'\n';
-    // std::cout<<"updated new image width : "<<elongated_image.info_.image_width_<<'\n';
-    std::cout<<"eit color size : "<<elongated_image.color_.size()<<'\n';
-    // std::cout<<"image width : "<<image.info_.image_width_<<'\n';
-    // std::cout<<"image height : "<<image.info_.image_height_<<'\n';
-    // exit(0);
-    unsigned width=elongated_image.info_.image_width_;
-    unsigned iwidth=image.info_.image_width_;
-    std::cout<<"diff : "<<diff<<'\n';
-    // std::cout<<"1.7*iwidth="<<1.7*(double)iwidth<<'\n';
     
-    bool pass=true;
+    unsigned ewidth=elongated_image.info_.image_width_;
+    unsigned iwidth=image.info_.image_width_;
+    diff=200;
+
     for(unsigned s=0;s<sf.size();++s){
-        pass=true;
-        // std::cout<<"approximated filled space width : "<<sf[s]*(double)iwidth<<'\n';
-        std::cout<<"null filled space width : "<<(width-sf[s]*(double)iwidth)/2<<'\n';
+        if(s==sf.size()-1) diff+=(image.info_.image_height_-diff*sf.size());
         for(unsigned i=0;i<diff;++i){
-            for(unsigned npos=0;npos<(width-sf[s]*(double)iwidth)/2;++npos, ++eit){
+            for(unsigned npos=0;npos<(ewidth-sf[s]*(double)iwidth)/2;++npos, ++eit){
                 *eit=Color(0,0,0,255);
             }
             csf=sf[s];
-            if(pass){ std::cout<<"csf : "<<csf<<'\n'; pass=false; }
             for(unsigned l=0;l<image.info_.image_width_;++l, ++it){
-                for(unsigned t=0;t<floor(csf);++t, ++eit){
-                    // std::cout<<"o\n";
-                    *eit=*it;
-                }
-                if(csf-floor(csf)<0.0001){ csf=sf[s]; continue; }
-                // it->Info(); (it+1)->Info(); (it+2)->Info();
-                *(eit++)=(*it).multiply(csf-floor(csf))+(*(it+1)).multiply(ceil(csf)-csf);
+                for(unsigned t=0;t<floor(csf);++t, ++eit) *eit=*it;
+                if(csf-floor(csf)<0.00000001){ csf=sf[s]; continue; }
+                *(eit++)=(*it)*(csf-floor(csf))+(*(it+1))*(ceil(csf)-csf);
                 double ccsf=csf;
                 csf=sf[s]-ceil(ccsf)+ccsf;
-                // std::cout<<"updated csf = "<<csf<<'\n';
-                // (eit-1)->Info();
-                // exit(0);
             }
-            for(unsigned npos=0;npos<(width-sf[s]*(double)iwidth)/2;++npos, ++eit){
+            for(unsigned npos=0;npos<(ewidth-sf[s]*(double)iwidth)/2;++npos, ++eit){
                 *eit=Color(0,0,0,255);
             }
         }
@@ -124,21 +111,24 @@ BMP BMP::elongate(const std::vector<double>& sf, const BMP& image){
     return elongated_image;
 }
 
-void BMP::create(std::string name) const{
+void BMP::create(std::string name, bool permission) const{
     if(info_.file_size_==0){
         throw Exception("Image data doesn't exist.", LOGIC);
     }
-    if(!name.empty()){
-        try{
-            set(name);
-        } catch(Exception& exception){
-            std::cout<<exception.get()<<'\n';
-        }
-    } else if(name_[0]==errchar.c_str()[0]){
-        try{
-            set(errchar);
-        } catch(Exception& exception){
-            std::cout<<exception.get()<<'\n';
+    if(permission) name_=name+".bmp";
+    else{
+        if(!name.empty()){
+            try{
+                set(name);
+            } catch(Exception& exception){
+                std::cout<<exception.get()<<'\n';
+            }
+        } else if(name_[0]==errchar.c_str()[0]){
+            try{
+                set(errchar);
+            } catch(Exception& exception){
+                std::cout<<exception.get()<<'\n';
+            }
         }
     }
     write(name_);
@@ -190,18 +180,17 @@ void BMP::init(const char* file_name){
     info_.image_size_=info_.file_size_-info_.offset_size_;
     info_.image_height_=info_.image_size_/info_.image_width_/(info_.bits_per_pixel_/8);
 
-    header_.resize(info_.offset_size_);
-    color_.resize(info_.image_size_/4);
+    try{
+        header_.resize(info_.offset_size_);
+        color_.resize(info_.image_size_/(info_.bits_per_pixel_/8));
+    } catch(std::bad_alloc& exception){
+        throw Exception(exception.what(), MEMORY);
+    }
 
     image.seekg(0, image.beg);
     image.read((char*)&header_[0], info_.offset_size_);
-    image.read((char*)&color_[0], info_.image_size_); // /(info_.bits_per_pixel_/4)
+    image.read((char*)&color_[0], info_.image_size_);
     
-    std::cout<<"init called with color values : ";
-    
-    std::cout<<(int)color_[0].r_<<", "<<(int)color_[0].g_<<", ";
-    std::cout<<(int)color_[0].b_<<", "<<(int)color_[0].a_<<'\n';
-
     image.close();
 }
 
@@ -224,12 +213,10 @@ void BMP::update(){
     std::vector<byte4> updated_file_size(4);
     std::vector<byte4> updated_image_width(4);
     std::vector<byte4> updated_image_height(4);
-    std::vector<byte4> updated_image_size(4);
 
     updated_file_size=info_.get_byte_vector(FILE_SIZE, 4);
     updated_image_width=info_.get_byte_vector(WIDTH, 4);
     updated_image_height=info_.get_byte_vector(HEIGHT, 4);
-    updated_image_size=info_.get_byte_vector(IMAGE_SIZE, 4);
 
     for(unsigned pos=2, i=0;i<4;++pos, ++i){
         header_[pos]=updated_file_size[i];
@@ -240,9 +227,6 @@ void BMP::update(){
     for(unsigned pos=22, i=0;i<4;++pos, ++i){
         header_[pos]=updated_image_height[i];
     }
-    // for(unsigned pos=34, i=0;i<4;++pos, ++i){
-    //     header_[pos]=updated_image_size[i];
-    // }
 }
 
 void BMP::stitch(const BMP& image, bool stitch_type){
@@ -270,6 +254,10 @@ void BMP::stitch(const BMP& image, bool stitch_type){
     std::cout<<" ||| Images have been stitched succesfully.\n";
 }
 
-void BMP::allocate(std::vector<Color>::size_type size){
-    color_.resize(size);
+void BMP::allocate(std::vector<Color>::size_type size, const Color& def_color){
+    try{
+        color_.resize(size, def_color);
+    } catch(const std::bad_alloc& exception){
+        throw Exception(exception.what(), MEMORY);
+    }
 }

@@ -78,7 +78,7 @@ class BMP{
     void vertical_stitch(const BMP& image);
     void horizontal_stitch(const BMP& image);
     static BMP elongate(const std::vector<double>& sf, const BMP& image);
-    void create(std::string name="") const;
+    void create(std::string name="", bool permission=true) const;
     void remove();
 
     void operator=(const BMP& image);
@@ -91,5 +91,6 @@ class BMP{
     void write(const std::string& name) const;
     void update();
     void stitch(const BMP& image, bool stitch_type=HORIZONTAL_STITCH);
-    void allocate(std::vector<Color>::size_type size);
+    void add_null(std::vector<char>::iterator it, unsigned n_null);
+    void allocate(std::vector<Color>::size_type size, const Color& def_color=Color(0,0,0,255));
 };
